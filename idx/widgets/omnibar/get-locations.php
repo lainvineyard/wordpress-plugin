@@ -48,7 +48,7 @@ class Get_Locations {
 	}
 
 	/**
-	 * idx_api
+	 * Idx_api
 	 *
 	 * @var mixed
 	 * @access public
@@ -56,7 +56,7 @@ class Get_Locations {
 	public $idx_api;
 
 	/**
-	 * address_mls
+	 * Address_mls
 	 *
 	 * @var mixed
 	 * @access private
@@ -64,7 +64,7 @@ class Get_Locations {
 	private $address_mls;
 
 	/**
-	 * mls_list
+	 * Mls_list
 	 *
 	 * @var mixed
 	 * @access private
@@ -72,7 +72,7 @@ class Get_Locations {
 	private $mls_list;
 
 	/**
-	 * property_types
+	 * Property_types
 	 *
 	 * @var mixed
 	 * @access private
@@ -84,7 +84,7 @@ class Get_Locations {
 	 */
 
 	/**
-	 * get_idxIDs function.
+	 * Get_idxIDs function.
 	 *
 	 * @access public
 	 * @param mixed $array
@@ -186,10 +186,29 @@ class Get_Locations {
 			$omnibar_zipcode = 'combinedActiveMLS';
 			update_option( 'idx_omnibar_current_zipcode_list', 'combinedActiveMLS', false );
 		}
+
 		// grab responses for CCZs and add JSON object container for front end JavaScript
-		$cities   = '"cities" : ' . json_encode( $this->idx_api->idx_api( "cities/$omnibar_city" ) );
-		$counties = ', "counties" : ' . json_encode( $this->idx_api->idx_api( "counties/$omnibar_county" ) );
-		$zipcodes = ', "zipcodes" : ' . json_encode( $this->idx_api->idx_api( "postalcodes/$omnibar_zipcode" ) );
+		// note that if an MLS explicitly set by the user undergoes a vendor migration or is removed from the account we might receive a 400 error reponse from the API when we try to get a list of the cities, counties or zip codes.
+		// if this happens, we will retry with the default combinedActiveMLS
+
+		$cities_api_response = $this->idx_api->idx_api( "cities/$omnibar_city" );
+		if (is_wp_error($cities_api_response)) {
+			$cities_api_response = $this->idx_api->idx_api( "cities/combinedActiveMLS" );
+		}
+		$cities   = '"cities" : ' . json_encode( $cities_api_response );
+
+		$counties_api_response = $this->idx_api->idx_api( "counties/$omnibar_county" );
+		if (is_wp_error($counties_api_response)) {
+			$counties_api_response = $this->idx_api->idx_api( "counties/combinedActiveMLS" );
+		}
+		$counties = ', "counties" : ' . json_encode( $counties_api_response );
+
+		$zipcodes_api_response = $this->idx_api->idx_api( "postalcodes/$omnibar_zipcode" );
+		if (is_wp_error($zipcodes_api_response)) {
+			$zipcodes_api_response = $this->idx_api->idx_api( "postalcodes/combinedActiveMLS" );
+		}
+		$zipcodes = ', "zipcodes" : ' . json_encode( $zipcodes_api_response );
+
 		return $cities . $counties . $zipcodes;
 	}
 
